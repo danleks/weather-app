@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Weather App</title>
+    <meta charset="utf-8" />
+	<style type="text/css">
+		html {
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .weather {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 240px;
+        }
+
+        .weather__icon {
+            width: 120px;
+            height: auto;
+        }
+
+        .weather__desc {
+            font-size: 18px;
+            text-align: center;
+        }
+	</style>
+</head>
+<body>
+
+	<h1>Weather App</h1>
+	<div id="app">Checking the weather near you...</div>
+
+	<script>
+		;(() => {
+            const app = document.querySelector('#app');
+            const key = "327d6c17decb43d5bcd0bb27dba55bd1";
+
+            /**
+             * Sanitize and encode all HTML in a user-submitted string
+             * https://portswigger.net/web-security/cross-site-scripting/preventing
+             * @param  {String} str  The user-submitted string
+             * @return {String} str  The sanitized string
+             */
+
+            const sanitizeHTML = (str) => {
+                return str.replace(/[^\w. ]/gi, function (c) {
+                    return '&#' + c.charCodeAt(0) + ';';
+                });
+            };
+
+
+            const locationHandler = (locationData) => {
+                const coordinates = {
+                    latitude: locationData.latitude, 
+                    longtitude: locationData.longitude,
+                }
+
+                return coordinates;
+            };
+
+            const renderWeather = ({ city_name: city, temp, weather }) => {
+                app.innerHTML = `
+                    <div class="weather">
+                        <img class="weather__icon" src='https://www.weatherbit.io/static/img/icons/${sanitizeHTML(weather.icon)}.png' />
+                        <p class="weather__desc">It is currently ${sanitizeHTML(temp.toString())}&#x2103; degrees and ${sanitizeHTML(weather.description)} in ${sanitizeHTML(city)}.</p>
+                    </div>
+                `;
+            }
+
+            const handleRequest = () => {
+                fetch('https://ipapi.co/json')
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        return Promise.reject(response);
+                    }
+                })
+                .then(locationData => {
+                    // store city data
+                    const { latitude, longtitude } = locationHandler(locationData);
+
+                    // Fetch weather api
+                    return fetch(`https://api.weatherbit.io/v2.0/current?lat=${latitude}&lon=${longtitude}&key=${key}`)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        return Promise.reject(response);
+                    }
+                })
+                .then(weatherData => {
+                    renderWeather(weatherData.data[0]);
+                })
+                .catch(error => {
+                    console.warn(console.warn(error));
+                })
+            };
+
+            handleRequest();
+        })();
+	</script>
+</body>
+</html>
