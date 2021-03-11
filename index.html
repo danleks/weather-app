@@ -33,6 +33,10 @@
             font-size: 18px;
             text-align: center;
         }
+
+        .weather__hidden {
+            display: none;
+        }
 	</style>
 </head>
 <body>
@@ -41,9 +45,18 @@
 	<div id="app">Checking the weather near you...</div>
 
 	<script>
-		;(() => {
+		const createWA = (options) => {
             const app = document.querySelector('#app');
-            const key = "327d6c17decb43d5bcd0bb27dba55bd1";
+
+            const defaults = {
+                apiKey: null,
+                selector: 'div',
+                tempToF: true,
+                description: 'It is currently {{temp}} degrees and {{desc}} in {{city}}.',
+                showIcon: true,
+            };
+
+            const settings = Object.assign(defaults, options);
 
             /**
              * Sanitize and encode all HTML in a user-submitted string
@@ -58,6 +71,25 @@
                 });
             };
 
+            const apiKeyHandler = () => {
+                if (!settings.apiKey) {
+                    console.warn('Provide api key');
+                    return;
+                }
+            }
+
+            const noWeatherRenderer = () => {
+                app.innerHTML = 'Cannot get weather info';
+            };
+
+            const tempHandler = (temp) => {
+                let temperature = temp;
+                if (settings.tempToF) {
+                    temperature = temp * 9 / 5 + 32;
+                }
+                return temperature;
+            };
+
 
             const locationHandler = (locationData) => {
                 const coordinates = {
@@ -68,12 +100,22 @@
                 return coordinates;
             };
 
+            const getDescription = (city, temp, weather) => {
+                return `${
+                    settings.description
+                        .replace('{{temp}}', temp)
+                        .replace('{{desc}}', weather.description)
+                        .replace('{{city}}', city)
+                }`
+            };
+
             const renderWeather = ({ city_name: city, temp, weather }) => {
+                let temperature = tempHandler(temp);
                 app.innerHTML = `
-                    <div class="weather">
-                        <img class="weather__icon" src='https://www.weatherbit.io/static/img/icons/${sanitizeHTML(weather.icon)}.png' />
-                        <p class="weather__desc">It is currently ${sanitizeHTML(temp.toString())}&#x2103; degrees and ${sanitizeHTML(weather.description)} in ${sanitizeHTML(city)}.</p>
-                    </div>
+                    <${settings.selector} class="weather">
+                        <img class='weather__icon ${!settings.showIcon && 'weather__hidden'}' src='https://www.weatherbit.io/static/img/icons/${sanitizeHTML(weather.icon)}.png' />
+                        <p class="weather__desc">${getDescription(city, temperature, weather)}</p>
+                    </${settings.selector}>
                 `;
             }
 
@@ -91,7 +133,7 @@
                     const { latitude, longtitude } = locationHandler(locationData);
 
                     // Fetch weather api
-                    return fetch(`https://api.weatherbit.io/v2.0/current?lat=${latitude}&lon=${longtitude}&key=${key}`)
+                    return fetch(`https://api.weatherbit.io/v2.0/current?lat=${latitude}&lon=${longtitude}&key=${settings.apiKey}`)
                 })
                 .then(response => {
                     if (response.ok) {
@@ -104,12 +146,22 @@
                     renderWeather(weatherData.data[0]);
                 })
                 .catch(error => {
+                    noWeatherRenderer();
                     console.warn(console.warn(error));
                 })
             };
 
+            apiKeyHandler();
             handleRequest();
-        })();
+        };
+
+        createWA({
+            apiKey: '327d6c17decb43d5bcd0bb27dba55bd1',
+            selector: 'section',
+            tempToF: true,
+            showIcon: true,
+            description: 'It is {{temp}} degress, {{desc}} in {{city}}'
+        });
 	</script>
 </body>
 </html>
