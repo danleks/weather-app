@@ -103,9 +103,9 @@
             const getDescription = (city, temp, weather) => {
                 return `${
                     settings.description
-                        .replace('{{temp}}', temp)
-                        .replace('{{desc}}', weather.description)
-                        .replace('{{city}}', city)
+                        .replace('{{temp}}', sanitizeHTML(temp.toString()))
+                        .replace('{{desc}}', sanitizeHTML(weather.description))
+                        .replace('{{city}}', sanitizeHTML(city))
                 }`
             };
 
